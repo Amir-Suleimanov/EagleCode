@@ -12,7 +12,7 @@ class SessionUserSerializer(serializers.ModelSerializer):
         model = User
         fields = ["id", "email", "fullName", "role", "athleteId"]
 
-    def get_athleteId(self, obj):
+    def get_athleteId(self, obj) -> str | None:
         return str(obj.athlete_profile.id) if hasattr(obj, "athlete_profile") else None
 
 

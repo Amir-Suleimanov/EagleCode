@@ -5,6 +5,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -75,7 +76,10 @@ class RefreshView(GenericAPIView):
         serializer = TokenRefreshSerializer(
             data={"refresh": request_serializer.validated_data["refreshToken"]}
         )
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as error:
+            raise InvalidToken(str(error)) from error
         data = serializer.validated_data
         submitted_refresh_token = request_serializer.validated_data["refreshToken"]
         return Response(
@@ -92,7 +96,12 @@ class LogoutView(GenericAPIView):
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        RefreshToken(serializer.validated_data["refreshToken"]).blacklist()
+        try:
+            RefreshToken(serializer.validated_data["refreshToken"]).blacklist()
+        except TokenError:
+            # Expired, malformed or already-blacklisted tokens cannot be reused anyway,
+            # so logout reports success instead of failing a repeated sign-out.
+            pass
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

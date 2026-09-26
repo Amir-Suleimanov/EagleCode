@@ -19,6 +19,50 @@ def test_register_login_and_me(api_client, city):
 
 
 @pytest.mark.django_db
+def test_refresh_rejects_unusable_token(api_client, athlete_user):
+    tokens = api_client.post(
+        "/api/auth/login",
+        {"email": athlete_user.email, "password": "demo123"},
+        format="json",
+    ).data
+    first = api_client.post(
+        "/api/auth/refresh", {"refreshToken": tokens["refreshToken"]}, format="json"
+    )
+    assert first.status_code == 200
+
+    replayed = api_client.post(
+        "/api/auth/refresh", {"refreshToken": tokens["refreshToken"]}, format="json"
+    )
+    assert replayed.status_code == 401
+
+    malformed = api_client.post("/api/auth/refresh", {"refreshToken": "nonsense"}, format="json")
+    assert malformed.status_code == 401
+
+
+@pytest.mark.django_db
+def test_logout_is_idempotent(api_client, athlete_user):
+    tokens = api_client.post(
+        "/api/auth/login",
+        {"email": athlete_user.email, "password": "demo123"},
+        format="json",
+    ).data
+    api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['accessToken']}")
+
+    for _ in range(2):
+        response = api_client.post(
+            "/api/auth/logout", {"refreshToken": tokens["refreshToken"]}, format="json"
+        )
+        assert response.status_code == 204
+
+    assert (
+        api_client.post(
+            "/api/auth/refresh", {"refreshToken": tokens["refreshToken"]}, format="json"
+        ).status_code
+        == 401
+    )
+
+
+@pytest.mark.django_db
 def test_athlete_cannot_add_meters(api_client, athlete_user):
     api_client.force_authenticate(athlete_user)
     response = api_client.post(
