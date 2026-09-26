@@ -3,15 +3,17 @@ import { Link } from 'react-router-dom';
 import { CompetitionCard } from '../../components/features/CompetitionCard';
 import { DagestanMap } from '../../components/features/DagestanMap';
 import { RankingTable } from '../../components/features/RankingTable';
-import { useAthletes, useCities, useCompetitions } from '../../hooks/useData';
+import { useAthletes, useCities, useCompetitions, useLevels } from '../../hooks/useData';
 import { eagleLevels } from '../../domain/eagleLevels';
-import { Badge, Card, LoadingState, Progress } from '../../components/ui/Primitives';
+import { Badge, Card, ErrorState, LoadingState, Progress } from '../../components/ui/Primitives';
 
 export default function HomePage() {
   const athletes = useAthletes();
   const cities = useCities();
   const competitions = useCompetitions();
-  if (!athletes.data || !cities.data || !competitions.data) return <LoadingState />;
+  const levels = useLevels();
+  if (athletes.isError || cities.isError || competitions.isError || levels.isError) return <ErrorState onRetry={() => { athletes.refetch(); cities.refetch(); competitions.refetch(); levels.refetch(); }}/>;
+  if (!athletes.data || !cities.data || !competitions.data || !levels.data) return <LoadingState />;
 
   return (
     <main>
@@ -42,7 +44,7 @@ export default function HomePage() {
 
       <section className="public-section dark-band" id="levels"><div className="section-heading row"><div><p className="eyebrow">СИСТЕМА ВЫСОТЫ</p><h2>Твой путь: Орёл I–X</h2></div><Badge tone="gold">10 уровней</Badge></div><div className="levels-strip">{eagleLevels.map((level) => <Card key={level.id} className={level.id === 'IV' ? 'active-level' : ''}><span>ОРЁЛ {level.id}</span><Award/><strong>{level.name}</strong><small>от {level.minMeters.toLocaleString('ru-RU')} м</small></Card>)}</div></section>
 
-      <section className="public-section" id="rating"><div className="section-heading"><p className="eyebrow">ОФИЦИАЛЬНЫЙ РЕЙТИНГ</p><h2>Спортивные таланты Дагестана</h2><p>Позиции рассчитываются по подтверждённым протоколам и начисленным метрам.</p></div><Card><RankingTable athletes={athletes.data} cities={cities.data} limit={4}/></Card></section>
+      <section className="public-section" id="rating"><div className="section-heading"><p className="eyebrow">ОФИЦИАЛЬНЫЙ РЕЙТИНГ</p><h2>Спортивные таланты Дагестана</h2><p>Позиции рассчитываются по подтверждённым протоколам и начисленным метрам.</p></div><Card><RankingTable athletes={athletes.data} cities={cities.data} levels={levels.data} limit={4}/></Card></section>
 
       <section className="public-section dark-band" id="competitions"><div className="section-heading"><p className="eyebrow">БЛИЖАЙШИЕ СТАРТЫ</p><h2>Соревнования сезона</h2></div><div className="card-grid card-grid-2">{competitions.data.slice(0, 4).map((item) => <CompetitionCard key={item.id} competition={item}/>)}</div></section>
 

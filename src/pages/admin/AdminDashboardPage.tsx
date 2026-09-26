@@ -2,11 +2,12 @@ import { BarChart3, ClipboardCheck, MapPin, Medal, Trophy, UsersRound } from 'lu
 import { Link } from 'react-router-dom';
 import { LineChart, MetricCard } from '../../components/features/Stats';
 import { PageHeader } from '../../components/layout/PageHeader';
-import { Badge, Card, LoadingState } from '../../components/ui/Primitives';
+import { Badge, Card, ErrorState, LoadingState } from '../../components/ui/Primitives';
 import { useApplications, useAthletes, useCities, useCompetitions, useTransactions } from '../../hooks/useData';
 
 export default function AdminDashboardPage() {
   const athletes = useAthletes(); const competitions = useCompetitions(); const applications = useApplications(); const cities = useCities(); const transactions = useTransactions();
+  if (athletes.isError || competitions.isError || applications.isError || cities.isError || transactions.isError) return <ErrorState onRetry={() => { athletes.refetch(); competitions.refetch(); applications.refetch(); cities.refetch(); transactions.refetch(); }}/>;
   if (!athletes.data || !competitions.data || !applications.data || !cities.data || !transactions.data) return <LoadingState/>;
   const pending = applications.data.filter((item) => item.status === 'pending');
   const meters = athletes.data.reduce((sum, item) => sum + item.meters, 0);

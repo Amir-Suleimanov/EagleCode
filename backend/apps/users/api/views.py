@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate
 from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.generics import GenericAPIView
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
@@ -120,10 +120,11 @@ class AthleteViewSet(ModelViewSet):
         return athletes(self.request.query_params)
 
     def get_permissions(self):
-        return [IsAuthenticated()] if self.action in ["list", "retrieve"] else [IsSelfOrAdmin()]
+        return [AllowAny()] if self.action in ["list", "retrieve"] else [IsSelfOrAdmin()]
 
 
 class CityViewSet(ReadOnlyModelViewSet):
+    permission_classes = [AllowAny]
     serializer_class = CitySerializer
 
     def get_queryset(self):

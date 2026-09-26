@@ -1,5 +1,6 @@
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import GenericAPIView, ListAPIView
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
@@ -19,11 +20,7 @@ class LevelViewSet(ModelViewSet):
         return levels()
 
     def get_permissions(self):
-        return (
-            super().get_permissions()
-            if self.action in ["list", "retrieve"]
-            else [IsPlatformAdmin()]
-        )
+        return [AllowAny()] if self.action in ["list", "retrieve"] else [IsPlatformAdmin()]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()

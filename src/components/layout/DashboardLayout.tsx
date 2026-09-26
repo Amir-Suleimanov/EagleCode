@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Bell, LogOut, Menu, Search, X } from 'lucide-react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Logo } from '../brand/Logo';
@@ -13,7 +13,10 @@ export function DashboardLayout({ admin = false, nav }: DashboardLayoutProps) {
   const [open, setOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const leave = () => { logout(); navigate('/'); };
+  // Longest match wins so that nested routes keep their parent section's label.
+  const current = [...nav].sort((a, b) => b.to.length - a.to.length).find(({ to }) => pathname === to || pathname.startsWith(`${to}/`));
 
   return (
     <div className={cx('dashboard-shell', admin && 'admin-shell')}>
@@ -39,7 +42,7 @@ export function DashboardLayout({ admin = false, nav }: DashboardLayoutProps) {
       <div className="dashboard-stage">
         <header className="dashboard-topbar">
           <button className="icon-button mobile-menu" onClick={() => setOpen(true)} aria-label="Открыть меню"><Menu /></button>
-          <div className="breadcrumb"><strong>EagleCode</strong><span>//</span><span>{admin ? 'Центр управления' : 'Спортивный профиль'}</span></div>
+          <div className="breadcrumb"><strong>EagleCode</strong><span>//</span><span>{current?.label ?? (admin ? 'Центр управления' : 'Спортивный профиль')}</span></div>
           <div className="topbar-actions">
             <label className="top-search"><Search size={17} /><span className="sr-only">Поиск</span><input aria-label="Поиск" placeholder="Поиск по платформе…" /></label>
             <button className="icon-button" aria-label="Уведомления"><Bell size={19} /><span className="notification-dot" /></button>

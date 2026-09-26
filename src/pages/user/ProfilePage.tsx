@@ -4,7 +4,7 @@ import { Activity, Award, BarChart3, Edit3, Medal, Trophy } from 'lucide-react';
 import { EagleProgress } from '../../components/features/EagleProgress';
 import { LineChart, MetricCard } from '../../components/features/Stats';
 import { PageHeader } from '../../components/layout/PageHeader';
-import { Button, Card, Field, Input, LoadingState } from '../../components/ui/Primitives';
+import { Button, Card, ErrorState, Field, Input, LoadingState } from '../../components/ui/Primitives';
 import { Overlay } from '../../components/ui/Overlay';
 import { useAuth } from '../../contexts/AuthContext';
 import { dataClient } from '../../services/client';
@@ -18,6 +18,7 @@ export default function ProfilePage() {
   const levels = useLevels();
   const results = useResults();
   const update = useMutation({ mutationFn: (input: { organization: string; sportTitle: string; disciplines: string[] }) => dataClient.updateAthlete(user!.athleteId!, input), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['athlete'] }); queryClient.invalidateQueries({ queryKey: ['athletes'] }); setEditing(false); } });
+  if (athlete.isError || levels.isError || results.isError) return <ErrorState onRetry={() => { athlete.refetch(); levels.refetch(); results.refetch(); }}/>;
   if (!athlete.data || !levels.data || !results.data) return <LoadingState />;
   const profile = athlete.data;
   const ownResults = results.data.filter((result) => result.athleteId === profile.id);

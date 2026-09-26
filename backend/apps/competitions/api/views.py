@@ -1,4 +1,5 @@
 from rest_framework import status
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
@@ -22,11 +23,7 @@ class CompetitionViewSet(ModelViewSet):
         return competitions(self.request.query_params)
 
     def get_permissions(self):
-        return (
-            super().get_permissions()
-            if self.action in ["list", "retrieve"]
-            else [IsPlatformAdmin()]
-        )
+        return [AllowAny()] if self.action in ["list", "retrieve"] else [IsPlatformAdmin()]
 
     def perform_destroy(self, instance):
         if instance.applications.exists() or instance.results.exists():

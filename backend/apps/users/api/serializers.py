@@ -74,6 +74,20 @@ class AthleteSerializer(serializers.ModelSerializer):
     def get_avatarInitials(self, obj) -> str:
         return build_initials(obj.user.full_name)
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # The roster is public, but a participant's email is not: only the athlete
+        # themselves and platform admins may read it.
+        request = self.context.get("request")
+        viewer = getattr(request, "user", None)
+        owner = viewer is not None and viewer.is_authenticated and viewer == instance.user
+        admin = viewer is not None and viewer.is_authenticated and (
+            viewer.role == "admin" or viewer.is_superuser
+        )
+        if not owner and not admin:
+            data.pop("email", None)
+        return data
+
 
 class CitySerializer(serializers.ModelSerializer):
     coordinates = serializers.SerializerMethodField()

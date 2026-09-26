@@ -55,3 +55,13 @@ export function LoadingState() {
 export function EmptyState({ title, description }: { title: string; description: string }) {
   return <Card className="empty-state"><strong>{title}</strong><p>{description}</p></Card>;
 }
+
+export function ErrorState({ onRetry }: { onRetry?: () => void }) {
+  return (
+    <Card className="empty-state">
+      <strong>Не удалось загрузить данные</strong>
+      <p>Проверьте подключение к сети и попробуйте ещё раз.</p>
+      {onRetry && <Button type="button" onClick={onRetry}>Повторить</Button>}
+    </Card>
+  );
+}
