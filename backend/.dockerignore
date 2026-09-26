@@ -1,0 +1,10 @@
+venv
+.venv
+db.sqlite3
+.env
+*.log
+**/__pycache__
+.pytest_cache
+.ruff_cache
+tests
+judge

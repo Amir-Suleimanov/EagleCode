@@ -1,0 +1,54 @@
+name: eaglecode
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: eaglecode
+      POSTGRES_USER: eaglecode
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eaglecode -d eaglecode"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DJANGO_DEBUG: "false"
+      DJANGO_ALLOWED_HOSTS: ${DOMAIN},localhost,backend
+      CORS_ALLOWED_ORIGINS: https://${DOMAIN}
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: eaglecode
+      DB_USER: eaglecode
+      DB_PASSWORD: ${DB_PASSWORD}
+      JUDGE_ENABLED: "true"
+      JUDGE_IMAGE: eaglecode-judge:py312
+      JUDGE_WORKERS: "2"
+    volumes:
+      # Judge containers are started as siblings on the host Docker daemon.
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/web.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      # Same pattern as the other sites here: the shared Caddy proxies to the docker gateway IP.
+      - "172.19.0.1:8095:80"
+
+volumes:
+  postgres:
