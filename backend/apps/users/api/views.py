@@ -77,10 +77,11 @@ class RefreshView(GenericAPIView):
         )
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
+        submitted_refresh_token = request_serializer.validated_data["refreshToken"]
         return Response(
             {
                 "accessToken": data["access"],
-                "refreshToken": data.get("refresh", request_serializer.validated_data["refreshToken"]),
+                "refreshToken": data.get("refresh", submitted_refresh_token),
             }
         )
 
