@@ -27,8 +27,11 @@ npm run test:e2e -- --project=desktop
 
 ```env
 VITE_DATA_SOURCE=api
-VITE_API_BASE_URL=/api
+VITE_API_BASE_URL=http://localhost:8000/api
 ```
+
+`VITE_API_BASE_URL` должен быть абсолютным: в `vite.config.ts` нет прокси, поэтому
+относительный `/api` ушёл бы на dev-сервер и вернул 404.
 
 Контракт транспорта описан в `src/services/DataClient.ts`, HTTP-маршруты — в `src/services/HttpDataClient.ts`.
 

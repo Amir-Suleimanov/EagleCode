@@ -8,4 +8,5 @@ export const useApplications = () => useQuery({ queryKey: ['applications'], quer
 export const useResults = () => useQuery({ queryKey: ['results'], queryFn: () => dataClient.getResults() });
 export const useTransactions = () => useQuery({ queryKey: ['transactions'], queryFn: () => dataClient.getTransactions() });
 export const useLevels = () => useQuery({ queryKey: ['levels'], queryFn: () => dataClient.getLevels() });
+export const useNotifications = () => useQuery({ queryKey: ['notifications'], queryFn: () => dataClient.getNotifications() });
 

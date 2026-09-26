@@ -98,7 +98,13 @@ USE_TZ = True
 STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CORS_ALLOWED_ORIGINS = [
-    item for item in env("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",") if item
+    item
+    # Browsers treat localhost and 127.0.0.1 as separate origins, so the dev
+    # server has to be allowed under both spellings or every request fails.
+    for item in env(
+        "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+    ).split(",")
+    if item
 ]
 
 REST_FRAMEWORK = {

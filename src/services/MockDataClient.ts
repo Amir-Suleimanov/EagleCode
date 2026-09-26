@@ -12,11 +12,15 @@ import type {
   Notification,
   RegisterInput,
   ResultInput,
+  SessionUser,
+  StoredNotification,
 } from '../types';
 
 const STORAGE_KEY = 'eaglecode.mock.v1';
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const pause = () => new Promise((resolve) => setTimeout(resolve, 80));
+const stripRecipient = ({ id, kind, title, message, readAt, createdAt }: StoredNotification): Notification =>
+  ({ id, kind, title, message, readAt, createdAt });
 
 export class MockDataClient implements DataClient {
   private read(): MockDatabase {
@@ -109,6 +113,12 @@ export class MockDataClient implements DataClient {
     const database = this.read();
     const application = this.require(database.applications.find((item) => item.id === id));
     application.status = status;
+    if (status === 'approved' || status === 'rejected') {
+      const title = status === 'approved' ? 'Заявка одобрена' : 'Заявка отклонена';
+      const decision = status === 'approved' ? 'участие подтверждено' : 'заявка отклонена';
+      const competition = database.competitions.find((item) => item.id === application.competitionId);
+      this.notify(database, application.athleteId, 'application', title, `Решение по соревнованию «${competition?.title ?? ''}»: ${decision}.`);
+    }
     this.write(database);
     return this.done(application);
   }
@@ -121,6 +131,7 @@ export class MockDataClient implements DataClient {
     const athlete = this.require(database.athletes.find((item) => item.id === input.athleteId));
     athlete.meters += input.metersAwarded;
     database.transactions.unshift({ id: `t-${Date.now()}`, athleteId: input.athleteId, amount: input.metersAwarded, reason: `Результат: ${result.score}`, protocol: `AUTO-${Date.now()}`, createdAt: result.publishedAt });
+    this.notify(database, input.athleteId, 'meters', 'Рейтинг обновлён', `${input.metersAwarded >= 0 ? '+' : ''}${input.metersAwarded} м. Результат: ${result.score}`);
     this.write(database);
     return this.done(result);
   }
@@ -131,6 +142,7 @@ export class MockDataClient implements DataClient {
     const transaction = { ...input, id: `t-${Date.now()}`, createdAt: new Date().toISOString() };
     database.transactions.unshift(transaction);
     this.require(database.athletes.find((item) => item.id === input.athleteId)).meters += input.amount;
+    this.notify(database, input.athleteId, 'meters', 'Рейтинг обновлён', `${input.amount >= 0 ? '+' : ''}${input.amount} м. ${input.reason}`);
     this.write(database);
     return this.done(transaction);
   }
@@ -146,8 +158,39 @@ export class MockDataClient implements DataClient {
     return this.done(database.levels[index]);
   }
 
-  async getNotifications(): Promise<Notification[]> { return this.done([]); }
-  async markNotificationRead(): Promise<Notification> { throw new Error('Уведомление не найдено'); }
+  async getNotifications(): Promise<Notification[]> {
+    const userId = this.sessionUserId();
+    const own = this.read().notifications.filter((item) => item.userId === userId);
+    own.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return this.done(own.map(stripRecipient));
+  }
+
+  async markNotificationRead(id: string): Promise<Notification> {
+    const database = this.read();
+    const stored = this.require(database.notifications.find((item) => item.id === id));
+    stored.readAt ??= new Date().toISOString();
+    this.write(database);
+    return this.done(stripRecipient(stored));
+  }
+
+  private sessionUserId(): string | null {
+    const stored = localStorage.getItem('eaglecode.session.v1');
+    return stored ? (JSON.parse(stored) as SessionUser).id : null;
+  }
+
+  private notify(database: MockDatabase, athleteId: string, kind: string, title: string, message: string) {
+    const owner = database.users.find((item) => item.athleteId === athleteId);
+    if (!owner) return;
+    database.notifications.unshift({
+      id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      userId: owner.id,
+      kind,
+      title,
+      message,
+      readAt: null,
+      createdAt: new Date().toISOString(),
+    });
+  }
 
   async reset() { localStorage.removeItem(STORAGE_KEY); await pause(); }
 

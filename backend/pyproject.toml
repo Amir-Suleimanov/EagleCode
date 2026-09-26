@@ -16,6 +16,11 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest~=8.3", "pytest-django~=4.10", "ruff~=0.9"]
 
+# A Django project, not a distributable library: name the packages explicitly so
+# setuptools does not refuse the flat layout it cannot infer.
+[tool.setuptools]
+packages = ["apps", "common", "config"]
+
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = ["test_*.py"]

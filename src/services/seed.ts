@@ -10,6 +10,11 @@ export const seedDatabase: MockDatabase = {
     { id: 'u-athlete', email: 'athlete@eaglecode.ru', fullName: 'Магомед Алиев', role: 'athlete', athleteId: 'a1' },
     { id: 'u-admin', email: 'admin@eaglecode.ru', fullName: 'Шамиль Гаджиев', role: 'admin' },
   ],
+  notifications: [
+    { id: 'n1', userId: 'u-athlete', kind: 'meters', title: 'Рейтинг обновлён', message: '+650 м. 3 место — Нарын-Кала', readAt: null, createdAt: '2026-09-14T18:00:00' },
+    { id: 'n2', userId: 'u-athlete', kind: 'application', title: 'Заявка одобрена', message: 'Решение по соревнованию «Кубок Дагестана по лёгкой атлетике»: участие подтверждено.', readAt: null, createdAt: '2026-09-10T09:30:00' },
+    { id: 'n3', userId: 'u-athlete', kind: 'meters', title: 'Рейтинг обновлён', message: '+180 м. Личный рекорд', readAt: '2026-08-22T08:00:00', createdAt: '2026-08-21T15:20:00' },
+  ],
   cities: [
     { id: 'c1', name: 'Махачкала', district: 'городской округ', coordinates: [42.98, 47.5] },
     { id: 'c2', name: 'Дербент', district: 'городской округ', coordinates: [42.06, 48.29] },

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { BarChart3, MapPin, Search, Trophy, UsersRound } from 'lucide-react';
 import { LineChart, MetricCard } from '../../components/features/Stats';
 import { RankingTable } from '../../components/features/RankingTable';
@@ -8,7 +9,10 @@ import { useAthletes, useCities, useLevels } from '../../hooks/useData';
 
 export default function RatingPage() {
   const athletes = useAthletes(); const cities = useCities(); const levels = useLevels();
-  const [query, setQuery] = useState(''); const [discipline, setDiscipline] = useState('Все');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const query = searchParams.get('q') ?? '';
+  const setQuery = (value: string) => setSearchParams(value ? { q: value } : {}, { replace: true });
+  const [discipline, setDiscipline] = useState('Все');
   const filtered = useMemo(() => athletes.data?.filter((item) => (discipline === 'Все' || item.disciplines.includes(discipline)) && `${item.fullName} ${item.organization}`.toLowerCase().includes(query.toLowerCase())) ?? [], [athletes.data, discipline, query]);
   if (athletes.isError || cities.isError || levels.isError) return <ErrorState onRetry={() => { athletes.refetch(); cities.refetch(); levels.refetch(); }}/>;
   if (!athletes.data || !cities.data || !levels.data) return <LoadingState/>;

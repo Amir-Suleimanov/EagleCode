@@ -11,5 +11,7 @@ backend/.env
 backend/db.sqlite3
 backend/.pytest_cache/
 backend/.ruff_cache/
+backend/*.egg-info/
+backend/.venv/
 backend/**/__pycache__/
 *.pyc

@@ -3,6 +3,8 @@ import { Bell, LogOut, Menu, Search, X } from 'lucide-react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../hooks/useData';
+import { NotificationsPanel } from '../features/NotificationsPanel';
 import { Logo } from '../brand/Logo';
 import { cx } from '../ui/Primitives';
 
@@ -11,7 +13,11 @@ interface DashboardLayoutProps { admin?: boolean; nav: NavItem[]; children?: Rea
 
 export function DashboardLayout({ admin = false, nav }: DashboardLayoutProps) {
   const [open, setOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const { user, logout } = useAuth();
+  const notifications = useNotifications();
+  const unreadCount = notifications.data?.filter((item) => !item.readAt).length ?? 0;
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const leave = () => { logout(); navigate('/'); };
@@ -44,12 +50,18 @@ export function DashboardLayout({ admin = false, nav }: DashboardLayoutProps) {
           <button className="icon-button mobile-menu" onClick={() => setOpen(true)} aria-label="Открыть меню"><Menu /></button>
           <div className="breadcrumb"><strong>EagleCode</strong><span>//</span><span>{current?.label ?? (admin ? 'Центр управления' : 'Спортивный профиль')}</span></div>
           <div className="topbar-actions">
-            <label className="top-search"><Search size={17} /><span className="sr-only">Поиск</span><input aria-label="Поиск" placeholder="Поиск по платформе…" /></label>
-            <button className="icon-button" aria-label="Уведомления"><Bell size={19} /><span className="notification-dot" /></button>
+            <form className="top-search" role="search" onSubmit={(event) => { event.preventDefault(); navigate(`${admin ? '/admin/users' : '/app/rating'}?q=${encodeURIComponent(search.trim())}`); }}>
+              <Search size={17} /><span className="sr-only">Поиск</span>
+              <input aria-label="Поиск участника" placeholder="Поиск участника…" value={search} onChange={(event) => setSearch(event.target.value)} />
+            </form>
+            <button className="icon-button" type="button" onClick={() => setNotificationsOpen(true)} aria-label={unreadCount ? `Уведомления, непрочитанных: ${unreadCount}` : 'Уведомления'}>
+              <Bell size={19} />{unreadCount > 0 && <span className="notification-dot" />}
+            </button>
             <span className="avatar avatar-small">{user?.fullName.slice(0, 1) ?? 'E'}</span>
           </div>
         </header>
         <main className="dashboard-main"><Outlet /></main>
+        <NotificationsPanel open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
       </div>
     </div>
   );

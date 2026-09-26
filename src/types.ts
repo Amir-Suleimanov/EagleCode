@@ -102,9 +102,13 @@ export interface EagleLevel {
   maxMeters: number | null;
 }
 
+/** Mock storage keeps the recipient alongside the record; the API infers it from the token. */
+export type StoredNotification = Notification & { userId: string };
+
 export interface MockDatabase {
   credentials: Record<string, string>;
   users: SessionUser[];
+  notifications: StoredNotification[];
   athletes: Athlete[];
   competitions: Competition[];
   applications: Application[];
