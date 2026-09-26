@@ -97,3 +97,17 @@ npm run dev:api
 с пользователем `eaglecode` и паролем `eaglecode` — значения по умолчанию из `.env.example`.
 
 Демо-доступы после `seed_demo`: `athlete@eaglecode.ru` и `admin@eaglecode.ru`, пароль `demo123`.
+
+## Модуль контестов (Кейс №2)
+
+Организатор: `/admin/contests` — создание контеста, задания с тестами, публикация, старт, проверка решений, завершение.
+Спортсмен: `/app/contests` — условия, редактор кода, вердикты, таблица; итог попадает в профиль и рейтинг.
+
+Автопроверка Python-решений идёт в одноразовом Docker-контейнере без сети (нужен запущенный Docker Desktop):
+
+```bash
+docker build -t eaglecode-judge:py312 backend/judge
+```
+
+Без Docker поставьте `JUDGE_ENABLED=false` в `backend/.env` — решения уйдут на ручную проверку.
+Порт Postgres в `backend/compose.yaml` — 5433 (5432 часто занят локальным Postgres).

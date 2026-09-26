@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "apps.competitions",
     "apps.ratings",
     "apps.notifications",
+    "apps.contests",
 ]
 
 MIDDLEWARE = [
@@ -101,9 +102,9 @@ CORS_ALLOWED_ORIGINS = [
     item
     # Browsers treat localhost and 127.0.0.1 as separate origins, so the dev
     # server has to be allowed under both spellings or every request fails.
-    for item in env(
-        "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
-    ).split(",")
+    for item in env("CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(
+        ","
+    )
     if item
 ]
 
@@ -120,3 +121,9 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,
 }
 SPECTACULAR_SETTINGS = {"TITLE": "EagleCode API", "VERSION": "1.0.0"}
+
+JUDGE_ENABLED = env("JUDGE_ENABLED", "true").lower() == "true"
+JUDGE_IMAGE = env("JUDGE_IMAGE", "eaglecode-judge:py312")
+JUDGE_WORKERS = int(env("JUDGE_WORKERS", "2"))
+# Runs the judge inline instead of in the thread pool; used by tests.
+JUDGE_SYNC = env("JUDGE_SYNC", "false").lower() == "true"

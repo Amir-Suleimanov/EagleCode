@@ -1,9 +1,17 @@
 from .models import Application, Competition, CompetitionResult
 
 
-def competitions(params=None):
+def competitions(params=None, user=None):
     params = params or {}
     queryset = Competition.objects.select_related("discipline")
+    is_admin = (
+        user is not None and user.is_authenticated and (user.role == "admin" or user.is_superuser)
+    )
+    if not is_admin:
+        queryset = queryset.exclude(status=Competition.Status.DRAFT)
+    # "format" is reserved by DRF for renderer negotiation, hence "kind".
+    if competition_format := params.get("kind"):
+        queryset = queryset.filter(format=competition_format)
     if status := params.get("status"):
         queryset = queryset.filter(status=status)
     if discipline := params.get("discipline"):

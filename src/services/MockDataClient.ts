@@ -1,11 +1,17 @@
 import { rankAthletes } from '../domain/eagleLevels';
+import { buildStandings } from '../domain/standings';
 import type { DataClient } from './DataClient';
 import { seedDatabase } from './seed';
 import type {
   Application,
   Athlete,
+  Competition,
   CompetitionInput,
+  CompetitionStatus,
+  ContestInput,
+  ContestTask,
   EagleLevel,
+  GradeInput,
   LoginInput,
   MeterInput,
   MockDatabase,
@@ -14,9 +20,16 @@ import type {
   ResultInput,
   SessionUser,
   StoredNotification,
+  Submission,
+  SubmissionInput,
+  TaskInput,
+  TestCase,
 } from '../types';
 
-const STORAGE_KEY = 'eaglecode.mock.v1';
+const STORAGE_KEY = 'eaglecode.mock.v2';
+const NEXT_STATUS: Partial<Record<CompetitionStatus, CompetitionStatus>> = { draft: 'registration', registration: 'active', active: 'finished' };
+const toContestTask = ({ tests, ...task }: MockDatabase['tasks'][number]): ContestTask =>
+  ({ ...task, samples: tests.filter((test) => test.isSample), testCount: tests.length });
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const pause = () => new Promise((resolve) => setTimeout(resolve, 80));
 const stripRecipient = ({ id, kind, title, message, readAt, createdAt }: StoredNotification): Notification =>
@@ -88,11 +101,18 @@ export class MockDataClient implements DataClient {
     return this.done(database.athletes[index]);
   }
 
-  async getCompetitions() { return this.done(this.read().competitions); }
-  async getCompetition(id: string) { return this.done(this.require(this.read().competitions.find((item) => item.id === id))); }
+  async getCompetitions() {
+    const database = this.read();
+    const visible = database.competitions.filter((item) => this.isAdmin() || item.status !== 'draft');
+    return this.done(visible.map((item) => this.withTaskCount(database, item)));
+  }
+  async getCompetition(id: string) {
+    const database = this.read();
+    return this.done(this.withTaskCount(database, this.require(database.competitions.find((item) => item.id === id))));
+  }
   async createCompetition(input: CompetitionInput) {
     const database = this.read();
-    const competition = { ...input, id: `cp-${Date.now()}` };
+    const competition: Competition = { format: 'offline', rules: '', externalPlatform: '', externalUrl: '', ...input, id: `cp-${Date.now()}`, taskCount: 0 };
     database.competitions.unshift(competition);
     this.write(database);
     return this.done(competition);
@@ -173,9 +193,155 @@ export class MockDataClient implements DataClient {
     return this.done(stripRecipient(stored));
   }
 
-  private sessionUserId(): string | null {
+  async createContest(input: ContestInput) {
+    const database = this.read();
+    const competition: Competition = { ...input, id: `ct-${Date.now()}`, format: 'contest', status: 'draft', location: 'Онлайн', capacity: 1000, registrationEndsAt: input.endsAt, schedule: [], taskCount: 0 };
+    database.competitions.unshift(competition);
+    this.write(database);
+    return this.done(competition);
+  }
+
+  async updateContest(id: string, input: Partial<ContestInput>) {
+    const database = this.read();
+    const competition = this.require(database.competitions.find((item) => item.id === id));
+    Object.assign(competition, input);
+    this.write(database);
+    return this.done(this.withTaskCount(database, competition));
+  }
+
+  async setCompetitionStatus(id: string, status: CompetitionStatus) {
+    const database = this.read();
+    const competition = this.require(database.competitions.find((item) => item.id === id));
+    if (NEXT_STATUS[competition.status] !== status) throw new Error('Недопустимый переход статуса.');
+    if (status === 'registration' && !database.tasks.some((task) => task.competitionId === id)) throw new Error('Добавьте хотя бы одно задание перед публикацией.');
+    const now = new Date().toISOString();
+    if (status === 'active' && competition.startsAt > now) competition.startsAt = now;
+    if (status === 'finished' && competition.endsAt > now) competition.endsAt = now;
+    competition.status = status;
+    this.write(database);
+    if (status === 'finished') await this.finalize(id);
+    return this.done(this.withTaskCount(this.read(), competition));
+  }
+
+  async getContestTasks(competitionId: string): Promise<ContestTask[]> {
+    const database = this.read();
+    const competition = this.require(database.competitions.find((item) => item.id === competitionId));
+    if (!this.isAdmin() && !['active', 'finished'].includes(competition.status)) return this.done([]);
+    return this.done(database.tasks.filter((task) => task.competitionId === competitionId).sort((a, b) => a.order - b.order).map(toContestTask));
+  }
+
+  async createTask(input: TaskInput) {
+    const database = this.read();
+    const task = { ...input, id: `tk-${Date.now()}`, tests: [] };
+    database.tasks.push(task);
+    this.write(database);
+    return this.done(toContestTask(task));
+  }
+
+  async updateTask(id: string, input: Partial<TaskInput>) {
+    const database = this.read();
+    const task = this.require(database.tasks.find((item) => item.id === id));
+    Object.assign(task, input);
+    this.write(database);
+    return this.done(toContestTask(task));
+  }
+
+  async deleteTask(id: string) {
+    const database = this.read();
+    if (database.submissions.some((item) => item.taskId === id)) throw new Error('По заданию уже есть решения — удалить нельзя.');
+    database.tasks = database.tasks.filter((item) => item.id !== id);
+    this.write(database);
+    await pause();
+  }
+
+  async getTaskTests(taskId: string) { return this.done(this.require(this.read().tasks.find((item) => item.id === taskId)).tests); }
+  async saveTaskTests(taskId: string, tests: TestCase[]) {
+    const database = this.read();
+    this.require(database.tasks.find((item) => item.id === taskId)).tests = tests;
+    this.write(database);
+    return this.done(tests);
+  }
+
+  async joinContest(competitionId: string) {
+    const athleteId = this.require(this.sessionUser()?.athleteId);
+    const database = this.read();
+    let application = database.applications.find((item) => item.athleteId === athleteId && item.competitionId === competitionId);
+    if (!application) { application = { id: `ap-${Date.now()}`, athleteId, competitionId, status: 'approved', createdAt: new Date().toISOString() }; database.applications.unshift(application); }
+    application.status = 'approved';
+    this.write(database);
+    return this.done(application);
+  }
+
+  async getSubmissions(filters: { competitionId?: string; taskId?: string; needsReview?: boolean }) {
+    const athleteId = this.isAdmin() ? null : this.sessionUser()?.athleteId;
+    return this.done(this.read().submissions.filter((item) =>
+      (!athleteId || item.athleteId === athleteId)
+      && (!filters.competitionId || item.competitionId === filters.competitionId)
+      && (!filters.taskId || item.taskId === filters.taskId)
+      && (!filters.needsReview || item.status === 'pending_review')));
+  }
+
+  async submitSolution(input: SubmissionInput) {
+    const athleteId = this.require(this.sessionUser()?.athleteId);
+    const database = this.read();
+    const task = this.require(database.tasks.find((item) => item.id === input.taskId));
+    const competition = this.require(database.competitions.find((item) => item.id === task.competitionId));
+    if (competition.status !== 'active') throw new Error('Приём решений закрыт: контест не идёт.');
+    await this.joinContest(competition.id);
+    const fresh = this.read();
+    const athlete = this.require(fresh.athletes.find((item) => item.id === athleteId));
+    // Mock mode has no sandbox, so every solution waits for the organiser.
+    const submission: Submission = { id: `s-${Date.now()}`, taskId: task.id, competitionId: competition.id, athleteId, athleteName: athlete.fullName, taskTitle: task.title, maxScore: task.maxScore, language: input.language, source: input.source, status: 'pending_review', verdict: '', score: null, autoScore: null, manualScore: null, comment: '', passedTests: 0, totalTests: task.tests.length, maxTimeMs: null, maxMemoryKb: null, report: [], log: '', createdAt: new Date().toISOString(), reviewedAt: null };
+    fresh.submissions.unshift(submission);
+    this.write(fresh);
+    return this.done(submission);
+  }
+
+  async gradeSubmission(id: string, input: GradeInput) {
+    const database = this.read();
+    const submission = this.require(database.submissions.find((item) => item.id === id));
+    if (input.manualScore > submission.maxScore) throw new Error(`Максимум — ${submission.maxScore}.`);
+    Object.assign(submission, { manualScore: input.manualScore, score: input.manualScore, comment: input.comment, status: 'reviewed', reviewedAt: new Date().toISOString() });
+    this.notify(database, submission.athleteId, 'submission', 'Решение проверено', `«${submission.taskTitle}»: ${input.manualScore} из ${submission.maxScore} баллов.`);
+    this.write(database);
+    return this.done(submission);
+  }
+
+  async rejudgeSubmission(): Promise<Submission> { throw new Error('Автопроверка работает только с backend.'); }
+
+  async getStandings(competitionId: string) {
+    const database = this.read();
+    const competition = this.require(database.competitions.find((item) => item.id === competitionId));
+    const participants = Object.fromEntries(database.applications
+      .filter((item) => item.competitionId === competitionId && item.status === 'approved')
+      .map((item) => [item.athleteId, database.athletes.find((athlete) => athlete.id === item.athleteId)?.fullName ?? '—']));
+    const taskIds = database.tasks.filter((task) => task.competitionId === competitionId).sort((a, b) => a.order - b.order).map((task) => task.id);
+    return this.done(buildStandings(taskIds, database.submissions.filter((item) => item.competitionId === competitionId), participants, competition.startsAt));
+  }
+
+  private async finalize(competitionId: string) {
+    const database = this.read();
+    const competition = this.require(database.competitions.find((item) => item.id === competitionId));
+    const maxTotal = database.tasks.filter((task) => task.competitionId === competitionId).reduce((sum, task) => sum + task.maxScore, 0);
+    for (const row of await this.getStandings(competitionId)) {
+      if (this.read().results.some((item) => item.competitionId === competitionId && item.athleteId === row.athleteId)) continue;
+      await this.publishResult({ competitionId, athleteId: row.athleteId, place: row.place, score: `${row.total} / ${maxTotal}`, metersAwarded: maxTotal ? Math.round(competition.rewardMeters * row.total / maxTotal) : 0 });
+    }
+  }
+
+  private withTaskCount(database: MockDatabase, competition: Competition): Competition {
+    return { ...competition, taskCount: database.tasks.filter((task) => task.competitionId === competition.id).length };
+  }
+
+  private sessionUser(): SessionUser | null {
     const stored = localStorage.getItem('eaglecode.session.v1');
-    return stored ? (JSON.parse(stored) as SessionUser).id : null;
+    return stored ? JSON.parse(stored) as SessionUser : null;
+  }
+
+  private isAdmin() { return this.sessionUser()?.role === 'admin'; }
+
+  private sessionUserId(): string | null {
+    return this.sessionUser()?.id ?? null;
   }
 
   private notify(database: MockDatabase, athleteId: string, kind: string, title: string, message: string) {

@@ -24,6 +24,10 @@ const AdminApplicationsPage = lazy(() => import('./pages/admin/AdminApplications
 const AdminResultsPage = lazy(() => import('./pages/admin/AdminResultsPage'));
 const AdminRatingPage = lazy(() => import('./pages/admin/AdminRatingPage'));
 const AdminLevelsPage = lazy(() => import('./pages/admin/AdminLevelsPage'));
+const ContestsPage = lazy(() => import('./pages/user/ContestsPage'));
+const ContestPage = lazy(() => import('./pages/user/ContestPage'));
+const AdminContestsPage = lazy(() => import('./pages/admin/AdminContestsPage'));
+const AdminContestPage = lazy(() => import('./pages/admin/AdminContestPage'));
 
 export default function App() {
   return (
@@ -32,10 +36,10 @@ export default function App() {
         <Route element={<PublicLayout/>}><Route index element={<HomePage/>}/></Route>
         <Route path="login" element={<LoginPage/>}/><Route path="register" element={<RegisterPage/>}/>
         <Route path="app" element={<RouteGuard role="athlete"><DashboardLayout nav={userNav}/></RouteGuard>}>
-          <Route index element={<Navigate to="profile" replace/>}/><Route path="profile" element={<ProfilePage/>}/><Route path="rating" element={<RatingPage/>}/><Route path="competitions" element={<CompetitionsPage/>}/><Route path="competitions/:id" element={<CompetitionDetailPage/>}/><Route path="results" element={<ResultsPage/>}/><Route path="achievements" element={<AchievementsPage/>}/><Route path="map" element={<MapPage/>}/><Route path="cities" element={<CitiesPage/>}/><Route path="levels" element={<LevelsPage/>}/>
+          <Route index element={<Navigate to="profile" replace/>}/><Route path="profile" element={<ProfilePage/>}/><Route path="rating" element={<RatingPage/>}/><Route path="competitions" element={<CompetitionsPage/>}/><Route path="competitions/:id" element={<CompetitionDetailPage/>}/><Route path="results" element={<ResultsPage/>}/><Route path="achievements" element={<AchievementsPage/>}/><Route path="map" element={<MapPage/>}/><Route path="cities" element={<CitiesPage/>}/><Route path="levels" element={<LevelsPage/>}/><Route path="contests" element={<ContestsPage/>}/><Route path="contests/:id" element={<ContestPage/>}/>
         </Route>
         <Route path="admin" element={<RouteGuard role="admin"><DashboardLayout admin nav={adminNav}/></RouteGuard>}>
-          <Route index element={<AdminDashboardPage/>}/><Route path="users" element={<AdminUsersPage/>}/><Route path="competitions" element={<AdminCompetitionsPage/>}/><Route path="applications" element={<AdminApplicationsPage/>}/><Route path="results" element={<AdminResultsPage/>}/><Route path="rating" element={<AdminRatingPage/>}/><Route path="levels" element={<AdminLevelsPage/>}/>
+          <Route index element={<AdminDashboardPage/>}/><Route path="users" element={<AdminUsersPage/>}/><Route path="competitions" element={<AdminCompetitionsPage/>}/><Route path="applications" element={<AdminApplicationsPage/>}/><Route path="results" element={<AdminResultsPage/>}/><Route path="rating" element={<AdminRatingPage/>}/><Route path="levels" element={<AdminLevelsPage/>}/><Route path="contests" element={<AdminContestsPage/>}/><Route path="contests/:id" element={<AdminContestPage/>}/>
         </Route>
         <Route path="*" element={<main className="fatal-error"><p className="eyebrow">404 // ROUTE</p><h1>Страница не найдена</h1><a className="button button-primary" href="/">На главную</a></main>}/>
       </Routes>

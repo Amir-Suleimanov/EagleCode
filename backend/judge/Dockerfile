@@ -1,0 +1,7 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+COPY run.py /judge/run.py
+USER 65534:65534
+WORKDIR /tmp
+ENTRYPOINT ["python3", "-B", "/judge/run.py"]

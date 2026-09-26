@@ -6,6 +6,7 @@ from rest_framework.viewsets import ModelViewSet
 from apps.competitions.models import Application, CompetitionResult
 from apps.competitions.selectors import applications_for, competitions, results
 from apps.competitions.services import publish_result, review_application, submit_application
+from apps.contests.services import sync_statuses
 from common.permissions import IsPlatformAdmin
 
 from .serializers import (
@@ -20,10 +21,14 @@ class CompetitionViewSet(ModelViewSet):
     serializer_class = CompetitionSerializer
 
     def get_queryset(self):
-        return competitions(self.request.query_params)
+        sync_statuses()
+        return competitions(self.request.query_params, self.request.user)
 
     def get_permissions(self):
         return [AllowAny()] if self.action in ["list", "retrieve"] else [IsPlatformAdmin()]
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
 
     def perform_destroy(self, instance):
         if instance.applications.exists() or instance.results.exists():

@@ -6,7 +6,11 @@ import type {
   Competition,
   CompetitionInput,
   CompetitionResult,
+  CompetitionStatus,
+  ContestInput,
+  ContestTask,
   EagleLevel,
+  GradeInput,
   LoginInput,
   MeterInput,
   MeterTransaction,
@@ -14,6 +18,11 @@ import type {
   RegisterInput,
   ResultInput,
   SessionUser,
+  StandingRow,
+  Submission,
+  SubmissionInput,
+  TaskInput,
+  TestCase,
 } from '../types';
 
 export interface DataClient {
@@ -38,6 +47,21 @@ export interface DataClient {
   getAchievements(athleteId: string): Promise<Achievement[]>;
   getLevels(): Promise<EagleLevel[]>;
   updateLevel(id: string, input: Partial<EagleLevel>): Promise<EagleLevel>;
+  createContest(input: ContestInput): Promise<Competition>;
+  updateContest(id: string, input: Partial<ContestInput>): Promise<Competition>;
+  setCompetitionStatus(id: string, status: CompetitionStatus): Promise<Competition>;
+  getContestTasks(competitionId: string): Promise<ContestTask[]>;
+  createTask(input: TaskInput): Promise<ContestTask>;
+  updateTask(id: string, input: Partial<TaskInput>): Promise<ContestTask>;
+  deleteTask(id: string): Promise<void>;
+  getTaskTests(taskId: string): Promise<TestCase[]>;
+  saveTaskTests(taskId: string, tests: TestCase[]): Promise<TestCase[]>;
+  joinContest(competitionId: string): Promise<Application>;
+  getSubmissions(filters: { competitionId?: string; taskId?: string; needsReview?: boolean }): Promise<Submission[]>;
+  submitSolution(input: SubmissionInput): Promise<Submission>;
+  gradeSubmission(id: string, input: GradeInput): Promise<Submission>;
+  rejudgeSubmission(id: string): Promise<Submission>;
+  getStandings(competitionId: string): Promise<StandingRow[]>;
   getNotifications(): Promise<Notification[]>;
   markNotificationRead(id: string): Promise<Notification>;
   reset(): Promise<void>;

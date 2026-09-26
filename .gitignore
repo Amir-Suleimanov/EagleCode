@@ -15,3 +15,6 @@ backend/*.egg-info/
 backend/*venv/
 backend/**/__pycache__/
 *.pyc
+backend/venv/
+backend/.venv/
+*.log

@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react';
+import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
 import { LoaderCircle } from 'lucide-react';
 
 export function cx(...values: Array<string | false | null | undefined>) {
@@ -37,6 +37,10 @@ export function Field({ label, htmlFor, hint, children }: FieldProps) {
 
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cx('input', props.className)} {...props} />;
+}
+
+export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return <textarea className={cx('input textarea', props.className)} {...props} />;
 }
 
 export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {

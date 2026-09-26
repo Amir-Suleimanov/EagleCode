@@ -1,7 +1,8 @@
-import { Award, BarChart3, ClipboardCheck, Gauge, Map, Medal, Settings, Trophy, UserRound, UsersRound } from 'lucide-react';
+import { Award, BarChart3, ClipboardCheck, Code2, Gauge, Map, Medal, Settings, Trophy, UserRound, UsersRound } from 'lucide-react';
 
 export const userNav = [
   { to: '/app/profile', label: 'Профиль', icon: UserRound },
+  { to: '/app/contests', label: 'Контесты', icon: Code2 },
   { to: '/app/rating', label: 'Рейтинг', icon: BarChart3 },
   { to: '/app/competitions', label: 'Соревнования', icon: Trophy },
   { to: '/app/results', label: 'Результаты', icon: Medal },
@@ -12,6 +13,7 @@ export const userNav = [
 
 export const adminNav = [
   { to: '/admin', label: 'Dashboard', icon: Gauge, end: true },
+  { to: '/admin/contests', label: 'Контесты', icon: Code2 },
   { to: '/admin/users', label: 'Участники', icon: UsersRound },
   { to: '/admin/competitions', label: 'Соревнования', icon: Trophy },
   { to: '/admin/applications', label: 'Заявки', icon: ClipboardCheck },

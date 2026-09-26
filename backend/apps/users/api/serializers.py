@@ -81,8 +81,10 @@ class AthleteSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         viewer = getattr(request, "user", None)
         owner = viewer is not None and viewer.is_authenticated and viewer == instance.user
-        admin = viewer is not None and viewer.is_authenticated and (
-            viewer.role == "admin" or viewer.is_superuser
+        admin = (
+            viewer is not None
+            and viewer.is_authenticated
+            and (viewer.role == "admin" or viewer.is_superuser)
         )
         if not owner and not admin:
             data.pop("email", None)

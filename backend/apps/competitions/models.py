@@ -6,12 +6,30 @@ from django.db import models
 
 class Competition(models.Model):
     class Status(models.TextChoices):
+        DRAFT = "draft", "Черновик"
         REGISTRATION = "registration", "Регистрация"
         UPCOMING = "upcoming", "Скоро"
         ACTIVE = "active", "Идёт"
         FINISHED = "finished", "Завершено"
 
+    class Format(models.TextChoices):
+        OFFLINE = "offline", "Очное"
+        CONTEST = "contest", "Онлайн-контест"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    format = models.CharField(
+        max_length=16, choices=Format.choices, default=Format.OFFLINE, db_index=True
+    )
+    rules = models.TextField(blank=True)
+    external_platform = models.CharField(max_length=80, blank=True)
+    external_url = models.URLField(blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_competitions",
+    )
     title = models.CharField(max_length=255)
     description = models.TextField()
     discipline = models.ForeignKey(

@@ -8,8 +8,17 @@ class CompetitionSerializer(serializers.ModelSerializer):
     discipline = serializers.SlugRelatedField(slug_field="name", queryset=Discipline.objects.all())
     startsAt = serializers.DateTimeField(source="starts_at")
     endsAt = serializers.DateTimeField(source="ends_at")
-    registrationEndsAt = serializers.DateTimeField(source="registration_ends_at")
-    rewardMeters = serializers.IntegerField(source="reward_meters")
+    registrationEndsAt = serializers.DateTimeField(source="registration_ends_at", required=False)
+    rewardMeters = serializers.IntegerField(source="reward_meters", min_value=0)
+    location = serializers.CharField(max_length=255, required=False)
+    capacity = serializers.IntegerField(min_value=1, required=False)
+    schedule = serializers.JSONField(required=False)
+    rules = serializers.CharField(allow_blank=True, required=False)
+    externalPlatform = serializers.CharField(
+        source="external_platform", allow_blank=True, max_length=80, required=False
+    )
+    externalUrl = serializers.URLField(source="external_url", allow_blank=True, required=False)
+    taskCount = serializers.SerializerMethodField()
 
     class Meta:
         model = Competition
@@ -18,6 +27,7 @@ class CompetitionSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "discipline",
+            "format",
             "location",
             "startsAt",
             "endsAt",
@@ -26,7 +36,46 @@ class CompetitionSerializer(serializers.ModelSerializer):
             "rewardMeters",
             "status",
             "schedule",
+            "rules",
+            "externalPlatform",
+            "externalUrl",
+            "taskCount",
         ]
+
+    def get_taskCount(self, competition) -> int:
+        return competition.tasks.count()
+
+    def validate(self, attrs):
+        starts_at = attrs.get("starts_at", getattr(self.instance, "starts_at", None))
+        ends_at = attrs.get("ends_at", getattr(self.instance, "ends_at", None))
+        if starts_at and ends_at and ends_at <= starts_at:
+            raise serializers.ValidationError({"endsAt": "Окончание должно быть позже начала."})
+        contest = attrs.get("format", getattr(self.instance, "format", None)) == "contest"
+        if contest:
+            if self.instance is None:
+                # Contests always start life as a draft and move on via the status endpoint.
+                attrs["status"] = Competition.Status.DRAFT
+                attrs.setdefault("location", "Онлайн")
+                attrs.setdefault("capacity", 1000)
+                attrs.setdefault("schedule", [])
+            else:
+                attrs.pop("status", None)
+                if self.instance.status == Competition.Status.FINISHED:
+                    raise serializers.ValidationError({"detail": "Контест завершён."})
+            attrs["registration_ends_at"] = ends_at
+        elif self.instance is None:
+            missing = [
+                name
+                for name, key in [
+                    ("location", "location"),
+                    ("capacity", "capacity"),
+                    ("registrationEndsAt", "registration_ends_at"),
+                ]
+                if key not in attrs
+            ]
+            if missing:
+                raise serializers.ValidationError({name: "Обязательное поле." for name in missing})
+        return attrs
 
 
 class ApplicationSerializer(serializers.ModelSerializer):
